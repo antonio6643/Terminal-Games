@@ -23,8 +23,12 @@ def clear():
 
 def GetKeydown():
     if msvcrt.kbhit():
-        key = msvcrt.getch().decode('UTF-8')
-        return key
+        try:
+            key = msvcrt.getch().decode('UTF-8')
+            return key
+        except UnicodeDecodeError:
+            return "unknown"
+        
     return None
 
 class Vector2: # Created to make snake positions easier when printing the grid.
@@ -61,6 +65,8 @@ def IsBlockAt(x,y,ignore=False):
     #if any(b.x == x and b.y == y for b in Blocks):
     #    return True
     for b in Blocks:
+        if b is None:
+            continue
         if any(p.x == x and p.y == y for p in b.pieces):
             return True
     if curBlock and not ignore:
@@ -85,19 +91,52 @@ class Block:
 
     def Move(self, dir):
         if self.locked == False:
-            for p in self.pieces:
-                p.x = Clamp(p.x+dir, 1, ViewportX-1)
+            if not any( IsBlockAt(b.x+dir, b.y, True) or b.x+dir < 1 or b.x+dir > ViewportX-1 for b in self.pieces ):
+                for p in self.pieces:
+                    p.x = Clamp(p.x+dir, 1, ViewportX-1)
 
-class TBlock(Block):
+class FourBlock(Block):
 
     def __init__(self):
         super().__init__([
-                Vector2(1, 1), Vector2(2, 1), Vector2(3, 1),
-                Vector2(2, 2),
-                Vector2(2, 3)
-            ])
+            Vector2(1,1), Vector2(2,1), Vector2(3,1), Vector2(4,1)
+        ])
 
-BlockSelections = [TBlock]
+class SquareBlock(Block):
+
+    def __init__(self):
+        super().__init__([
+            Vector2(1,1), Vector2(2,1),
+            Vector2(1,2), Vector2(2,2)
+        ])
+
+class LBlock(Block):
+
+    def __init__(self):
+        super().__init__([
+            Vector2(1,1),
+            Vector2(1,2),
+            Vector2(1,3), Vector2(2,3)
+        ])
+
+class TBlock(Block):
+    
+    def __init__(self):
+        super().__init__([
+            Vector2(1,1), Vector2(2,1), Vector2(3,1),
+            Vector2(2,2)
+        ])
+
+class ZigBlock(Block):
+
+    def __init__(self):
+        super().__init__([
+            Vector2(1,1),
+            Vector2(1,2), Vector2(2,2),
+            Vector2(2,3)
+        ])
+
+BlockSelections = [TBlock, FourBlock, SquareBlock, LBlock, ZigBlock]
 
 def GetNewBlock():
     global curBlock
@@ -134,6 +173,9 @@ while InProgress:
         print("EXITING")
         break
 
+    clear()
+    PrintGame()
+
     if curBlock:
         if key == "a":
             curBlock.Move(-1)
@@ -141,6 +183,4 @@ while InProgress:
             curBlock.Move(1)
 
     time.sleep(1/60)
-    clear()
-    PrintGame()
     
